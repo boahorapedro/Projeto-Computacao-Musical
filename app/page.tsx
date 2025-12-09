@@ -7,12 +7,30 @@ import { ChannelMixer } from "@/components/channel-mixer"
 import { MasterOutput } from "@/components/master-output"
 import { SynthesizeButton } from "@/components/synthesize-button"
 
+interface StemControls {
+  drums: number
+  bass: number
+  vocals: number
+  other: number
+}
+
 export default function EcoSynthPage() {
   const [baseAudio, setBaseAudio] = useState<File | null>(null)
   const [textureAudio, setTextureAudio] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [processingStage, setProcessingStage] = useState("")
   const [isProcessed, setIsProcessed] = useState(false)
+
+  const [baseStemVolumes, setBaseStemVolumes] = useState<StemControls>({
+    drums: 75,
+    bass: 75,
+    vocals: 75,
+    other: 75,
+  })
+  const [textureVolume, setTextureVolume] = useState(75)
+
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(180) // 3 minutes default
 
   const handleSynthesize = async () => {
     if (!baseAudio || !textureAudio) return
@@ -59,6 +77,12 @@ export default function EcoSynthPage() {
             file={baseAudio}
             onFileChange={setBaseAudio}
             showStemIndicators={true}
+            stemVolumes={baseStemVolumes}
+            onStemVolumesChange={setBaseStemVolumes}
+            currentTime={currentTime}
+            duration={duration}
+            onTimeChange={setCurrentTime}
+            onDurationChange={setDuration}
           />
           <AudioUploadCard
             title="Texture Source"
@@ -67,6 +91,12 @@ export default function EcoSynthPage() {
             onFileChange={setTextureAudio}
             showStemIndicators={false}
             isTexture={true}
+            textureVolume={textureVolume}
+            onTextureVolumeChange={setTextureVolume}
+            currentTime={currentTime}
+            duration={duration}
+            onTimeChange={setCurrentTime}
+            onDurationChange={setDuration}
           />
         </div>
 
@@ -83,10 +113,21 @@ export default function EcoSynthPage() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="border-t border-border pt-6">
               <h2 className="mb-6 text-2xl font-semibold text-foreground">Reconstruction Mixer</h2>
-              <ChannelMixer />
+              <ChannelMixer
+                stemVolumes={baseStemVolumes}
+                textureVolume={textureVolume}
+                onStemVolumesChange={setBaseStemVolumes}
+                onTextureVolumeChange={setTextureVolume}
+              />
             </div>
 
-            <MasterOutput />
+            <MasterOutput
+              stemVolumes={baseStemVolumes}
+              textureVolume={textureVolume}
+              currentTime={currentTime}
+              duration={duration}
+              onTimeChange={setCurrentTime}
+            />
           </div>
         )}
       </div>

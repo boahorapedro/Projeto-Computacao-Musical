@@ -4,10 +4,38 @@ import { useState } from "react"
 import { Play, Pause, Download } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 
-export function MasterOutput() {
+interface StemControls {
+  drums: number
+  bass: number
+  vocals: number
+  other: number
+}
+
+interface MasterOutputProps {
+  stemVolumes: StemControls
+  textureVolume: number
+  currentTime: number
+  duration: number
+  onTimeChange: (time: number) => void
+}
+
+export function MasterOutput({ stemVolumes, textureVolume, currentTime, duration, onTimeChange }: MasterOutputProps) {
   const [isPlaying, setIsPlaying] = useState(false)
+
+  const calculateCombinedLevel = () => {
+    return (stemVolumes.drums + stemVolumes.bass + stemVolumes.vocals + stemVolumes.other + textureVolume) / 5
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, "0")}`
+  }
+
+  const combinedLevel = calculateCombinedLevel()
 
   return (
     <Card className="border-border bg-card p-6">
@@ -16,16 +44,35 @@ export function MasterOutput() {
       {/* Master Waveform Visualizer */}
       <div className="mb-6 h-32 rounded-lg bg-secondary/50 p-4">
         <div className="flex h-full items-center justify-around gap-0.5">
-          {Array.from({ length: 120 }).map((_, i) => (
-            <div
-              key={i}
-              className={cn("w-1 rounded-sm transition-all", isPlaying ? "bg-bio-green" : "bg-bio-green/40")}
-              style={{
-                height: `${Math.sin(i * 0.2) * 40 + 50}%`,
-                opacity: isPlaying ? Math.random() * 0.5 + 0.5 : 0.6,
-              }}
-            />
-          ))}
+          {Array.from({ length: 120 }).map((_, i) => {
+            const baseHeight = Math.sin(i * 0.2) * 40 + 50
+            const adjustedHeight = (baseHeight * combinedLevel) / 100
+
+            return (
+              <div
+                key={i}
+                className={cn("w-1 rounded-sm transition-all", isPlaying ? "bg-bio-green" : "bg-bio-green/40")}
+                style={{
+                  height: `${adjustedHeight}%`,
+                  opacity: isPlaying ? Math.random() * 0.5 + 0.5 : 0.6,
+                }}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="mb-4 space-y-2">
+        <Slider
+          value={[currentTime]}
+          onValueChange={([value]) => onTimeChange(value)}
+          max={duration}
+          step={1}
+          className="w-full"
+        />
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
       </div>
 

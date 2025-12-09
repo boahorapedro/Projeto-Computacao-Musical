@@ -23,6 +23,14 @@ interface AudioUploadCardProps {
   onFileChange: (file: File | null) => void
   showStemIndicators?: boolean
   isTexture?: boolean
+  stemVolumes?: StemControls
+  onStemVolumesChange?: (volumes: StemControls) => void
+  textureVolume?: number
+  onTextureVolumeChange?: (volume: number) => void
+  currentTime?: number
+  duration?: number
+  onTimeChange?: (time: number) => void
+  onDurationChange?: (duration: number) => void
 }
 
 export function AudioUploadCard({
@@ -32,16 +40,28 @@ export function AudioUploadCard({
   onFileChange,
   showStemIndicators = false,
   isTexture = false,
+  stemVolumes,
+  onStemVolumesChange,
+  textureVolume,
+  onTextureVolumeChange,
+  currentTime = 0,
+  duration = 180,
+  onTimeChange,
+  onDurationChange,
 }: AudioUploadCardProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [stemVolumes, setStemVolumes] = useState<StemControls>({
+
+  const [localStemVolumes, setLocalStemVolumes] = useState<StemControls>({
     drums: 75,
     bass: 75,
     vocals: 75,
     other: 75,
   })
+
+  const effectiveStemVolumes = stemVolumes || localStemVolumes
+  const effectiveTextureVolume = textureVolume ?? localStemVolumes.other
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -64,7 +84,26 @@ export function AudioUploadCard({
   }
 
   const updateStemVolume = (stem: keyof StemControls, value: number) => {
-    setStemVolumes((prev) => ({ ...prev, [stem]: value }))
+    const newVolumes = { ...effectiveStemVolumes, [stem]: value }
+    if (onStemVolumesChange) {
+      onStemVolumesChange(newVolumes)
+    } else {
+      setLocalStemVolumes(newVolumes)
+    }
+  }
+
+  const updateTextureVolume = (value: number) => {
+    if (onTextureVolumeChange) {
+      onTextureVolumeChange(value)
+    } else {
+      setLocalStemVolumes((prev) => ({ ...prev, other: value }))
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
   return (
@@ -155,6 +194,20 @@ export function AudioUploadCard({
                 </Button>
               </div>
 
+              <div className="mb-4 space-y-2">
+                <Slider
+                  value={[currentTime]}
+                  onValueChange={([value]) => onTimeChange?.(value)}
+                  max={duration}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+              </div>
+
               {showStemIndicators && (
                 <div className="mt-4 space-y-3">
                   <p className="text-xs font-medium text-muted-foreground">Stem Control</p>
@@ -166,10 +219,10 @@ export function AudioUploadCard({
                         <Disc3 className="h-3 w-3 text-bio-green" />
                         <span className="text-xs text-bio-green">Drums</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{stemVolumes.drums}%</span>
+                      <span className="text-xs text-muted-foreground">{effectiveStemVolumes.drums}%</span>
                     </div>
                     <Slider
-                      value={[stemVolumes.drums]}
+                      value={[effectiveStemVolumes.drums]}
                       onValueChange={([value]) => updateStemVolume("drums", value)}
                       max={100}
                       step={1}
@@ -184,10 +237,10 @@ export function AudioUploadCard({
                         <Waveform className="h-3 w-3 text-bio-green" />
                         <span className="text-xs text-bio-green">Bass</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{stemVolumes.bass}%</span>
+                      <span className="text-xs text-muted-foreground">{effectiveStemVolumes.bass}%</span>
                     </div>
                     <Slider
-                      value={[stemVolumes.bass]}
+                      value={[effectiveStemVolumes.bass]}
                       onValueChange={([value]) => updateStemVolume("bass", value)}
                       max={100}
                       step={1}
@@ -202,10 +255,10 @@ export function AudioUploadCard({
                         <Mic className="h-3 w-3 text-bio-green" />
                         <span className="text-xs text-bio-green">Vocals</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{stemVolumes.vocals}%</span>
+                      <span className="text-xs text-muted-foreground">{effectiveStemVolumes.vocals}%</span>
                     </div>
                     <Slider
-                      value={[stemVolumes.vocals]}
+                      value={[effectiveStemVolumes.vocals]}
                       onValueChange={([value]) => updateStemVolume("vocals", value)}
                       max={100}
                       step={1}
@@ -220,10 +273,10 @@ export function AudioUploadCard({
                         <Music className="h-3 w-3 text-bio-green" />
                         <span className="text-xs text-bio-green">Other</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{stemVolumes.other}%</span>
+                      <span className="text-xs text-muted-foreground">{effectiveStemVolumes.other}%</span>
                     </div>
                     <Slider
-                      value={[stemVolumes.other]}
+                      value={[effectiveStemVolumes.other]}
                       onValueChange={([value]) => updateStemVolume("other", value)}
                       max={100}
                       step={1}
@@ -242,11 +295,11 @@ export function AudioUploadCard({
                         <Waveform className="h-3 w-3 text-bio-green" />
                         <span className="text-xs text-bio-green">Texture Level</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{stemVolumes.other}%</span>
+                      <span className="text-xs text-muted-foreground">{effectiveTextureVolume}%</span>
                     </div>
                     <Slider
-                      value={[stemVolumes.other]}
-                      onValueChange={([value]) => updateStemVolume("other", value)}
+                      value={[effectiveTextureVolume]}
+                      onValueChange={([value]) => updateTextureVolume(value)}
                       max={100}
                       step={1}
                       className="w-full"
